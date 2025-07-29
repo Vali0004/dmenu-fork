@@ -17,11 +17,6 @@ desktop_file=$(grep -F "$selection:" "$cache" | cut -d: -f2-)
     exit 1
 }
 
-# Extract Exec= command
 exec_line=$(grep -m1 '^Exec=' "$desktop_file" | cut -d= -f2-)
-
-# Strip known desktop args (e.g. %u %U %f %F %i %c %k)
-exec_cmd=$(echo "$exec_line" | sed -E 's/ *%[ufUcik]//g')
-
-# Run in background
+exec_cmd=$(echo "$exec_line" | sed -E 's/%[a-zA-Z]//g')
 setsid sh -c "$exec_cmd" >/dev/null 2>&1 &
