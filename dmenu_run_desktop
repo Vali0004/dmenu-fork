@@ -1,2 +1,27 @@
 #!/bin/sh
-dmenu_path_desktop | dmenu "$@" | xargs gtk-launch &
+
+cachedir="${XDG_CACHE_HOME:-$HOME/.cache}"
+cache="$cachedir/dmenu_run_desktop"
+
+[ -f "$cache" ] || {
+    echo "Missing desktop cache; please run dmenu_path_desktop first." >&2
+    exit 1
+}
+
+selection=$(cut -d: -f1 "$cache" | dmenu "$@")
+[ -z "$selection" ] && exit 0
+
+desktop_file=$(grep -F "$selection:" "$cache" | cut -d: -f2-)
+[ ! -f "$desktop_file" ] && {
+    echo "Could not find .desktop file for $selection" >&2
+    exit 1
+}
+
+# Extract Exec= command
+exec_line=$(grep -m1 '^Exec=' "$desktop_file" | cut -d= -f2-)
+
+# Strip known desktop args (e.g. %u %U %f %F %i %c %k)
+exec_cmd=$(echo "$exec_line" | sed -E 's/ *%[ufUcik]//g')
+
+# Run in background
+setsid sh -c "$exec_cmd" >/dev/null 2>&1 &

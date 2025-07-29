@@ -15,33 +15,36 @@ done
 dirs="${dirs#:}"
 
 if stest -dqr -n "$cache" $PATH; then
-    {
-        for dir in $dirs; do
-            stest -fl "$dir" \
-                | grep -v 'mimeinfo.cache' \
-                | grep -v -i 'wine' \
-				| grep -v -i '^.*URI-' \
-				| grep -v -i '^.*URL-' \
-                | while IFS= read -r file; do
-                    sed -n '/^Name=/ { s/^Name=//; p; q }' "$dir/$file"
-                done
-        done
-    } \
-    | grep -v -F -x -e "Dmenu Launch" \
-                    -e "Qt V4L2 video capture utility" \
-                    -e "Autorun Prompt" \
-                    -e "Eye of GNOME" \
-                    -e "Qt V4L2 test Utility" \
-                    -e "umpv Media Player" \
-                    -e "compton" \
-                    -e "picom" \
-                    -e "XDG Assist" \
-                    -e "ProtonUp-Qt" \
-                    -e "Run Command" \
-					-e "XDG Launch" \
-					-e "GTK+ Demo" \
+    > "$cache"
+    for dir in $dirs; do
+        stest -fl "$dir" \
+            | grep -v 'mimeinfo.cache' \
+            | grep -v -i 'wine' \
+            | grep -v -i '^.*URI-' \
+            | grep -v -i '^.*URL-' \
+            | while IFS= read -r file; do
+                full_path="$dir/$file"
+                name=$(grep -m1 '^Name[en_US]=' "$full_path" | cut -d= -f2-)
+                if [ -z "$name" ]; then
+                    name=$(grep -m1 '^Name=' "$full_path" | cut -d= -f2-)
+                fi
+                [ -n "$name" ] && echo "$name:$full_path"
+            done
+    done \
+    | grep -v -F -x -e "Dmenu Launch:" \
+                    -e "Qt V4L2 video capture utility:" \
+                    -e "Autorun Prompt:" \
+                    -e "Eye of GNOME:" \
+                    -e "Qt V4L2 test Utility:" \
+                    -e "umpv Media Player:" \
+                    -e "compton:" \
+                    -e "picom:" \
+                    -e "XDG Assist:" \
+                    -e "ProtonUp-Qt:" \
+                    -e "Run Command:" \
+                    -e "XDG Launch:" \
+                    -e "GTK+ Demo:" \
     | sort -u \
-    | tee "$cache"
-else
-    cat "$cache"
+    | awk -F: '!seen[$1]++' > "$cache"
 fi
+cut -d: -f1 "$cache"
